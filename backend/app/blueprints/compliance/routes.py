@@ -1,0 +1,73 @@
+"""
+Compliance Blueprint Routes.
+
+DPDP Compliance Dashboard — admin-only access.
+Provides aggregated metrics, rights request tracking, and compliance scoring.
+"""
+
+from flask import request, jsonify
+
+from app.blueprints.compliance import compliance_bp
+from app.extensions import get_db
+from app.services.compliance_service import ComplianceService
+from app.middleware.auth_middleware import jwt_required, roles_required
+
+
+def _get_compliance_service():
+    return ComplianceService(get_db())
+
+
+@compliance_bp.route("/dashboard", methods=["GET"])
+@jwt_required
+@roles_required("admin")
+def get_dashboard():
+    """
+    Get full compliance dashboard.
+
+    Returns aggregated data from all collections for DPO/Admin overview.
+    """
+    svc = _get_compliance_service()
+    dashboard = svc.get_dashboard()
+    return jsonify({"dashboard": dashboard}), 200
+
+
+@compliance_bp.route("/stats", methods=["GET"])
+@jwt_required
+@roles_required("admin")
+def get_stats():
+    """Get concise compliance statistics."""
+    svc = _get_compliance_service()
+    stats = svc.get_stats()
+    return jsonify({"stats": stats}), 200
+
+
+@compliance_bp.route("/rights-requests", methods=["GET"])
+@jwt_required
+@roles_required("admin")
+def get_rights_requests():
+    """
+    Get DPDP rights requests (corrections + erasures).
+
+    Query params:
+        skip: Pagination offset
+        limit: Max results (default 20)
+    """
+    svc = _get_compliance_service()
+    skip = request.args.get("skip", 0, type=int)
+    limit = request.args.get("limit", 20, type=int)
+    data = svc.get_rights_requests(skip=skip, limit=limit)
+    return jsonify({"rights_requests": data}), 200
+
+
+@compliance_bp.route("/compliance-score", methods=["GET"])
+@jwt_required
+@roles_required("admin")
+def get_compliance_score():
+    """
+    Get DPDP compliance score (0-100).
+
+    Evaluates encryption, consent, audit, blockchain, and rights coverage.
+    """
+    svc = _get_compliance_service()
+    score = svc.get_compliance_score()
+    return jsonify({"compliance_score": score}), 200
