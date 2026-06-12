@@ -1,0 +1,26 @@
+# Flask Framework
+Flask==3.1.1
+flask-cors==5.0.1
+
+# MongoDB
+pymongo==4.12.1
+
+# Authentication
+PyJWT==2.10.1
+bcrypt==4.3.0
+
+# Blockchain
+web3==7.6.0
+
+# Encryption
+pycryptodome==3.21.0
+cryptography==44.0.3
+
+# Validation
+marshmallow==3.25.1
+
+# Utilities
+python-dotenv==1.1.0
+
+# Testing
+pytest==8.3.5
