@@ -5,7 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary (Blue)
+        // Primary (Blue) #2563EB
         primary: {
           50: "#EFF6FF",
           100: "#DBEAFE",
@@ -14,29 +14,36 @@ const config: Config = {
           400: "#60A5FA",
           500: "#3B82F6",
           600: "#2563EB",
-          700: "#1E40AF",
-          800: "#1E3A5F",
+          700: "#1D4ED8",
+          800: "#1E40AF",
           900: "#1E3A8A",
         },
-        // Secondary (Saffron)
-        saffron: {
-          50: "#FFF8F0",
-          100: "#FFF3E0",
-          200: "#FFE0B2",
-          300: "#FFCC80",
-          400: "#FFB74D",
-          500: "#FF9933",
-          600: "#F57C00",
-          700: "#E65100",
+        // Secondary #0F4C81
+        secondary: {
+          DEFAULT: "#0F4C81",
+          light: "#1A5E9A",
         },
-        // Success (Green)
         success: {
-          50: "#F0FDF4",
-          100: "#DCFCE7",
-          200: "#BBF7D0",
-          400: "#4ADE80",
-          500: "#16A34A",
-          600: "#15803D",
+          DEFAULT: "#10B981",
+        },
+        warning: {
+          DEFAULT: "#F59E0B",
+        },
+        danger: {
+          DEFAULT: "#EF4444",
+        },
+        background: "#F8FAFC",
+        neutral: {
+          50: "#F9FAFB",
+          100: "#F3F4F6",
+          200: "#E5E7EB",
+          300: "#D1D5DB",
+          400: "#9CA3AF",
+          500: "#6B7280",
+          600: "#4B5563",
+          700: "#374151",
+          800: "#1F2937",
+          900: "#111827",
         },
       },
       fontFamily: {

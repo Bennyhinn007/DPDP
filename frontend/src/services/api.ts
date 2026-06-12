@@ -1,14 +1,15 @@
 /**
  * Axios API Client.
  *
- * Configured with base URL, JWT interceptor, and error handling.
+ * Configured with base URL, JWT interceptor, and centralized error handling.
  */
 
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import type { ApiError } from "@/types";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
@@ -29,17 +30,32 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle 401 (token expired)
+// Response interceptor: handle 401 globally
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      // Clear stored token and redirect to login
-      localStorage.removeItem("access_token");
-      window.location.href = "/login";
+      // Avoid redirect loop on the login page itself
+      if (!window.location.pathname.includes("/login")) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
 );
+
+/**
+ * Extract a human-readable error message from an Axios error.
+ */
+export function getErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const apiError = error.response?.data as ApiError | undefined;
+    return apiError?.message || error.message || "An unexpected error occurred";
+  }
+  return "An unexpected error occurred";
+}
 
 export default api;

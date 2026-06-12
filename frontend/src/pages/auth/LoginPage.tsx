@@ -1,0 +1,120 @@
+/**
+ * Login Page.
+ *
+ * Professional healthcare portal authentication.
+ */
+
+import { useState, type FormEvent } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ShieldCheck, Lock, Mail, AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getErrorMessage } from "@/services/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+export function LoginPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/dashboard";
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const user = await login(email, password);
+      // Route based on role
+      if (user.role === "admin" || user.role === "dpo") {
+        navigate("/dpo", { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 via-background to-success/5 px-4">
+      <div className="w-full max-w-md">
+        {/* Logo header */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary-600 shadow-lg">
+            <ShieldCheck className="h-7 w-7 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-secondary">DPDP Healthcare Platform</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Secure, consent-driven health data management
+          </p>
+        </div>
+
+        {/* Login card */}
+        <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
+          <h2 className="mb-1 text-lg font-semibold text-neutral-800">Sign in</h2>
+          <p className="mb-6 text-sm text-neutral-500">
+            Access your health data securely
+          </p>
+
+          {error && (
+            <div className="mb-4 flex items-center gap-2 rounded-md bg-danger/5 px-3 py-2.5 text-sm text-danger">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"}
+            </Button>
+          </form>
+
+          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-neutral-400">
+            <ShieldCheck className="h-3.5 w-3.5 text-success" />
+            DPDP Act compliant · Data residency: India
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
