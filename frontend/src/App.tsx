@@ -14,6 +14,9 @@ import { PatientDashboard } from "@/pages/patient/PatientDashboard";
 import { PersonalDataCenter } from "@/pages/patient/PersonalDataCenter";
 import { ConsentCenter } from "@/pages/patient/ConsentCenter";
 import { AuditTimeline } from "@/pages/patient/AuditTimeline";
+import { IntegrityVerification } from "@/pages/patient/IntegrityVerification";
+import { DPODashboard } from "@/pages/dpo/DPODashboard";
+import { ComplianceDashboard } from "@/pages/dpo/ComplianceDashboard";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { UnauthorizedPage } from "@/pages/UnauthorizedPage";
 
@@ -39,7 +42,7 @@ function App() {
               <Route path="/my-data" element={<PersonalDataCenter />} />
               <Route path="/consents" element={<ConsentCenter />} />
               <Route path="/timeline" element={<AuditTimeline />} />
-              <Route path="/verify" element={<PlaceholderPage title="Integrity Verification" />} />
+              <Route path="/verify" element={<IntegrityVerification />} />
             </Route>
 
             {/* Protected (admin/dpo) */}
@@ -50,7 +53,8 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="/dpo" element={<PlaceholderPage title="Compliance Dashboard" />} />
+              <Route path="/dpo" element={<DPODashboard />} />
+              <Route path="/dpo/compliance" element={<ComplianceDashboard />} />
               <Route path="/admin/users" element={<PlaceholderPage title="User Management" />} />
             </Route>
 

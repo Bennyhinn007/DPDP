@@ -9,6 +9,7 @@ import {
   Clock,
   FileCheck,
   BarChart3,
+  PieChart,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -56,6 +57,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Compliance Dashboard",
     path: "/dpo",
     icon: BarChart3,
+    roles: ["admin", "dpo"],
+  },
+  {
+    label: "Compliance Breakdown",
+    path: "/dpo/compliance",
+    icon: PieChart,
     roles: ["admin", "dpo"],
   },
   {
