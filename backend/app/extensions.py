@@ -7,12 +7,11 @@ These are configured once and shared across the application.
 
 from flask import Flask
 from pymongo import MongoClient
-from web3 import Web3
 
 # Global instances (initialized in init_extensions)
 mongo_client: MongoClient = None
 db = None
-w3: Web3 = None
+w3 = None
 
 
 def init_extensions(app: Flask) -> None:
@@ -29,7 +28,24 @@ def init_extensions(app: Flask) -> None:
     db = mongo_client[app.config["MONGO_DB_NAME"]]
 
     # Web3 (Ganache)
-    w3 = Web3(Web3.HTTPProvider(app.config["GANACHE_URL"]))
+    try:
+        from web3 import Web3
+        provider = Web3.HTTPProvider(
+            app.config["GANACHE_URL"],
+            request_kwargs={"timeout": 3}
+        )
+        w3 = Web3(provider)
+    except Exception:
+        w3 = None
+
+    # Set encryption key in environment if configured
+    if app.config.get("ENCRYPTION_KEY"):
+        import os
+        os.environ["ENCRYPTION_KEY"] = app.config["ENCRYPTION_KEY"]
+        # Reset singleton so it picks up the new key
+        from app.services.encryption_service import EncryptionService
+        import app.services.encryption_service as enc_mod
+        enc_mod._instance = EncryptionService(app.config["ENCRYPTION_KEY"])
 
     app.extensions["mongo_client"] = mongo_client
     app.extensions["db"] = db

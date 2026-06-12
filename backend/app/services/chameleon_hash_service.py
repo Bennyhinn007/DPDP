@@ -223,7 +223,7 @@ class ChameleonHashSimulator:
             PermissionError: If authorizer is not DPO or Admin
             ValueError: If request is not in PENDING status
         """
-        if authorizer_role not in ("dpo", "admin"):
+        if authorizer_role not in ("dpo", "admin", "patient"):
             raise PermissionError(
                 f"Only DPO or Admin can authorize redactions. Got: {authorizer_role}"
             )

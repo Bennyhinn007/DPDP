@@ -32,10 +32,13 @@ class BlockchainService:
         self.w3 = w3
 
         # Use first Ganache account as sender
-        if w3 and w3.is_connected():
-            self._account = w3.eth.accounts[0]
-        else:
-            self._account = None
+        self._account = None
+        if w3:
+            try:
+                if w3.is_connected():
+                    self._account = w3.eth.accounts[0]
+            except Exception:
+                pass
 
     @property
     def is_connected(self) -> bool:

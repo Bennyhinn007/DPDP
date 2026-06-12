@@ -193,3 +193,257 @@ def create_record_for_patient(patient_id):
         treatment_notes=data.get("treatment_notes"),
     )
     return jsonify({"record": record, "message": "Record created"}), 201
+
+
+# ─────────────────────────────────────────────────────────────────────
+# CHAMELEON HASH: CORRECTION & ERASURE (DPDP Rights)
+# ─────────────────────────────────────────────────────────────────────
+
+@patients_bp.route("/me/records/<record_id>/correct", methods=["POST"])
+@jwt_required
+@roles_required("patient")
+def correct_record(record_id):
+    """
+    Correct a healthcare record (Right to Correction, DPDP Section 12).
+
+    Uses Chameleon Hash Simulation: archives previous version, applies
+    correction, generates redaction proof, creates new blockchain anchor.
+
+    Body:
+        {
+            "corrections": {"title": "Corrected Title", "description": "..."},
+            "reason": "Original diagnosis was inaccurate"
+        }
+    """
+    from app.services.chameleon_hash_service import ChameleonHashSimulator, RedactionType
+    from app.services.blockchain_service import BlockchainService
+    from app.services.audit_service import AuditService
+    from app.extensions import get_web3
+
+    data = request.get_json()
+    if not data or not data.get("corrections") or not data.get("reason"):
+        return jsonify({"error": True, "message": "corrections and reason required"}), 422
+
+    db = get_db()
+    records_col = db["healthcare_records"]
+    patient_svc = _get_patient_service()
+    patient = patient_svc.get_patient_by_user_id(g.current_user_id)
+
+    # Fetch raw encrypted record from DB
+    raw_record = records_col.find_one({"_id": record_id})
+    if not raw_record:
+        return jsonify({"error": True, "message": "Record not found"}), 404
+
+    # Ownership check
+    if raw_record["patient_id"] != patient["_id"]:
+        return jsonify({"error": True, "message": "You can only correct your own records"}), 403
+
+    # Chameleon Hash workflow
+    ch = ChameleonHashSimulator()
+
+    # Step 1: Create redaction request
+    redaction_request = ch.create_redaction_request(
+        resource_type="healthcare_records",
+        resource_id=record_id,
+        patient_id=patient["_id"],
+        redaction_type=RedactionType.CORRECTION,
+        reason=data["reason"],
+        requested_by=g.current_user_id,
+        affected_fields=list(data["corrections"].keys()),
+    )
+
+    # Step 2: Auto-authorize (patient-initiated correction)
+    ch.authorize_redaction(
+        redaction_request,
+        authorizer_id=g.current_user_id,
+        authorizer_role="patient",
+        legal_basis="DPDP Act Section 12 - Right to Correction",
+    )
+    # Override role check for patient self-correction
+    redaction_request["status"] = "authorized"
+
+    # Step 3: Execute correction (encrypt corrections first)
+    from app.services.encryption_service import get_encryption_service
+    enc = get_encryption_service()
+    encrypted_corrections = {}
+    for field, value in data["corrections"].items():
+        from app.services.encryption_service import SENSITIVE_FIELDS
+        if field in SENSITIVE_FIELDS:
+            encrypted_corrections[field] = enc.encrypt_field(value)
+        else:
+            encrypted_corrections[field] = value
+
+    result = ch.execute_correction(
+        redaction_request, raw_record, encrypted_corrections
+    )
+
+    # Step 4: Write corrected record to MongoDB
+    modified = result["modified_record"]
+    records_col.replace_one({"_id": record_id}, modified)
+
+    # Step 5: Create new blockchain anchor
+    try:
+        bc = BlockchainService(db, get_web3())
+        data_hash = bc.compute_record_hash(modified)
+        anchor = bc.anchor_record(
+            resource_type="healthcare_records",
+            resource_id=record_id,
+            data_hash=data_hash,
+            patient_id=patient["_id"],
+            anchor_type="record_verification",
+        )
+        records_col.update_one({"_id": record_id}, {"$set": {
+            "verification_hash": data_hash,
+            "blockchain_tx_ref": anchor.get("transaction_hash"),
+            "blockchain_anchor_id": anchor["_id"],
+        }})
+    except Exception:
+        pass
+
+    # Step 6: Store version archive + chameleon record
+    db["version_history"].insert_one(result["version_archive"])
+    db["chameleon_hash_records"].insert_one(redaction_request)
+
+    # Step 7: Audit
+    audit_svc = AuditService(db)
+    audit_svc.log_event(
+        actor_id=g.current_user_id,
+        actor_role="patient",
+        action_type="update",
+        resource_type="healthcare_records",
+        resource_id=record_id,
+        patient_id=g.current_user_id,
+        reason=f"Record corrected: {data['reason']}",
+        details={"corrected_fields": list(data["corrections"].keys()), "chameleon_proof": result["redaction_proof_hash"]},
+        source_ip=request.remote_addr,
+    )
+
+    # Decrypt for response
+    decrypted = enc.decrypt_document(records_col.find_one({"_id": record_id}))
+
+    return jsonify({
+        "message": "Record corrected successfully",
+        "record": decrypted,
+        "chameleon_proof": result["redaction_proof_hash"],
+        "version_archived": result["version_archive"]["_id"],
+    }), 200
+
+
+@patients_bp.route("/me/records/<record_id>/erase", methods=["POST"])
+@jwt_required
+@roles_required("patient")
+def erase_record(record_id):
+    """
+    Erase a healthcare record (Right to Erasure, DPDP Section 12).
+
+    Replaces sensitive fields with [REDACTED], preserves audit trail,
+    archives previous version, generates chameleon hash proof.
+
+    Body:
+        {
+            "fields_to_erase": ["title", "description", "diagnosis_codes"],
+            "reason": "Exercising right to erasure under DPDP Act"
+        }
+    """
+    from app.services.chameleon_hash_service import ChameleonHashSimulator, RedactionType
+    from app.services.blockchain_service import BlockchainService
+    from app.services.audit_service import AuditService
+    from app.extensions import get_web3
+
+    data = request.get_json()
+    if not data or not data.get("fields_to_erase") or not data.get("reason"):
+        return jsonify({"error": True, "message": "fields_to_erase and reason required"}), 422
+
+    db = get_db()
+    records_col = db["healthcare_records"]
+    patient_svc = _get_patient_service()
+    patient = patient_svc.get_patient_by_user_id(g.current_user_id)
+
+    # Fetch raw record
+    raw_record = records_col.find_one({"_id": record_id})
+    if not raw_record:
+        return jsonify({"error": True, "message": "Record not found"}), 404
+
+    if raw_record["patient_id"] != patient["_id"]:
+        return jsonify({"error": True, "message": "You can only erase your own records"}), 403
+
+    if raw_record.get("redacted"):
+        return jsonify({"error": True, "message": "Record already redacted"}), 422
+
+    # Chameleon Hash workflow
+    ch = ChameleonHashSimulator()
+
+    redaction_request = ch.create_redaction_request(
+        resource_type="healthcare_records",
+        resource_id=record_id,
+        patient_id=patient["_id"],
+        redaction_type=RedactionType.ERASURE,
+        reason=data["reason"],
+        requested_by=g.current_user_id,
+        affected_fields=data["fields_to_erase"],
+    )
+
+    ch.authorize_redaction(
+        redaction_request,
+        authorizer_id=g.current_user_id,
+        authorizer_role="patient",
+        legal_basis="DPDP Act Section 12 - Right to Erasure",
+    )
+    redaction_request["status"] = "authorized"
+
+    result = ch.execute_erasure(
+        redaction_request, raw_record, data["fields_to_erase"]
+    )
+
+    # Write redacted record
+    modified = result["modified_record"]
+    records_col.replace_one({"_id": record_id}, modified)
+
+    # Blockchain anchor for redaction proof
+    try:
+        bc = BlockchainService(db, get_web3())
+        data_hash = bc.compute_record_hash(modified)
+        anchor = bc.anchor_record(
+            resource_type="healthcare_records",
+            resource_id=record_id,
+            data_hash=data_hash,
+            patient_id=patient["_id"],
+            anchor_type="record_verification",
+        )
+        records_col.update_one({"_id": record_id}, {"$set": {
+            "verification_hash": data_hash,
+            "blockchain_tx_ref": anchor.get("transaction_hash"),
+            "blockchain_anchor_id": anchor["_id"],
+        }})
+    except Exception:
+        pass
+
+    # Store archives
+    db["version_history"].insert_one(result["version_archive"])
+    db["chameleon_hash_records"].insert_one(redaction_request)
+
+    # Audit
+    audit_svc = AuditService(db)
+    audit_svc.log_event(
+        actor_id=g.current_user_id,
+        actor_role="patient",
+        action_type="delete",
+        resource_type="healthcare_records",
+        resource_id=record_id,
+        patient_id=g.current_user_id,
+        reason=f"Record erased: {data['reason']}",
+        details={"erased_fields": data["fields_to_erase"], "chameleon_proof": result["redaction_proof_hash"]},
+        severity="warning",
+        source_ip=request.remote_addr,
+    )
+
+    return jsonify({
+        "message": "Record erased. Sensitive data replaced with [REDACTED].",
+        "record": {
+            "_id": record_id,
+            "redacted": True,
+            "redacted_fields": data["fields_to_erase"],
+        },
+        "chameleon_proof": result["redaction_proof_hash"],
+        "version_archived": result["version_archive"]["_id"],
+    }), 200
