@@ -10,6 +10,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/layouts/AppShell";
 import { LoginPage } from "@/pages/auth/LoginPage";
+import { PatientDashboard } from "@/pages/patient/PatientDashboard";
+import { PersonalDataCenter } from "@/pages/patient/PersonalDataCenter";
+import { ConsentCenter } from "@/pages/patient/ConsentCenter";
+import { AuditTimeline } from "@/pages/patient/AuditTimeline";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { UnauthorizedPage } from "@/pages/UnauthorizedPage";
 
@@ -31,10 +35,10 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="/dashboard" element={<PlaceholderPage title="Patient Dashboard" />} />
-              <Route path="/my-data" element={<PlaceholderPage title="Personal Data Center" />} />
-              <Route path="/consents" element={<PlaceholderPage title="Consent Center" />} />
-              <Route path="/timeline" element={<PlaceholderPage title="Audit Timeline" />} />
+              <Route path="/dashboard" element={<PatientDashboard />} />
+              <Route path="/my-data" element={<PersonalDataCenter />} />
+              <Route path="/consents" element={<ConsentCenter />} />
+              <Route path="/timeline" element={<AuditTimeline />} />
               <Route path="/verify" element={<PlaceholderPage title="Integrity Verification" />} />
             </Route>
 
