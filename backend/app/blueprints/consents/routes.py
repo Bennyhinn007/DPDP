@@ -75,6 +75,35 @@ def grant_consent():
         source_ip=request.remote_addr,
     )
 
+    # Blockchain anchoring for consent
+    try:
+        from app.services.blockchain_service import BlockchainService
+        from app.extensions import get_web3
+        import hashlib, json
+        bc = BlockchainService(get_db(), get_web3())
+        consent_hash = hashlib.sha256(
+            json.dumps(result["consent"], sort_keys=True, separators=(",", ":"), default=str).encode()
+        ).hexdigest()
+        anchor = bc.anchor_record(
+            resource_type="consents",
+            resource_id=result["consent"]["_id"],
+            data_hash=consent_hash,
+            patient_id=patient_id,
+            anchor_type="consent",
+        )
+        # Update consent with blockchain reference
+        get_db()["consents"].update_one(
+            {"_id": result["consent"]["_id"]},
+            {"$set": {
+                "consent_hash": consent_hash,
+                "blockchain_tx_ref": anchor.get("transaction_hash"),
+                "blockchain_anchor_id": anchor["_id"],
+            }}
+        )
+        result["consent"]["blockchain_tx_ref"] = anchor.get("transaction_hash")
+    except Exception:
+        pass  # Non-blocking
+
     return jsonify({
         "message": "Consent granted successfully",
         "consent": result["consent"],
@@ -232,6 +261,25 @@ def withdraw_consent(consent_id):
         severity="warning",
         source_ip=request.remote_addr,
     )
+
+    # Blockchain anchoring for withdrawal
+    try:
+        from app.services.blockchain_service import BlockchainService
+        from app.extensions import get_web3
+        import hashlib, json
+        bc = BlockchainService(get_db(), get_web3())
+        withdrawal_hash = hashlib.sha256(
+            json.dumps({"consent_id": consent_id, "action": "withdraw", "reason": data.get("reason")}, sort_keys=True, separators=(",", ":"), default=str).encode()
+        ).hexdigest()
+        bc.anchor_record(
+            resource_type="consents",
+            resource_id=consent_id,
+            data_hash=withdrawal_hash,
+            patient_id=patient_id,
+            anchor_type="consent",
+        )
+    except Exception:
+        pass
 
     return jsonify({
         "message": "Consent withdrawn. Access revoked immediately.",

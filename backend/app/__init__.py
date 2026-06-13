@@ -49,38 +49,6 @@ def create_app(config_name: str = "development") -> Flask:
     def health_check():
         return {"status": "healthy", "service": "dpdp-healthcare-api"}, 200
 
-    # MongoDB connectivity test (temporary verification endpoint)
-    @app.route("/mongo-test")
-    def mongo_test():
-        from app.extensions import get_db
-        from datetime import datetime, timezone
-
-        db = get_db()
-        collection_name = "connection_test"
-        collection = db[collection_name]
-
-        # Insert a test document
-        test_doc = {
-            "status": "working",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "purpose": "MongoDB connectivity verification",
-        }
-        insert_result = collection.insert_one(test_doc)
-
-        # Read it back
-        read_back = collection.find_one({"_id": insert_result.inserted_id})
-
-        # Clean up (remove test document)
-        collection.delete_one({"_id": insert_result.inserted_id})
-
-        return {
-            "message": "MongoDB Connected",
-            "collection": collection_name,
-            "inserted_id": str(insert_result.inserted_id),
-            "read_back_status": read_back["status"] if read_back else None,
-            "verified": read_back is not None and read_back["status"] == "working",
-        }, 200
-
     return app
 
 

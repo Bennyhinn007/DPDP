@@ -10,6 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/layouts/AppShell";
 import { LoginPage } from "@/pages/auth/LoginPage";
+import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { PatientDashboard } from "@/pages/patient/PatientDashboard";
 import { PersonalDataCenter } from "@/pages/patient/PersonalDataCenter";
 import { ConsentCenter } from "@/pages/patient/ConsentCenter";
@@ -28,6 +29,7 @@ function App() {
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Protected (patient) */}

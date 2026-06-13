@@ -10,6 +10,7 @@ import { Outlet, NavLink } from "react-router-dom";
 import { ShieldCheck, X } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { useAuth } from "@/contexts/AuthContext";
 import { getNavItemsForRole } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
@@ -67,7 +68,9 @@ export function AppShell() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onMenuClick={() => setMobileOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

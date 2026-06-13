@@ -24,6 +24,7 @@ import { consentService } from "@/services/consentService";
 import { patientService } from "@/services/patientService";
 import { auditService } from "@/services/auditService";
 import { StatCard } from "@/components/shared/StatCard";
+import { PageLoader } from "@/components/shared/PageLoader";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,17 +37,17 @@ const CHART_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#0F4C81", "#8B5CF6", "#E
 export function PatientDashboard() {
   const { user } = useAuth();
 
-  const { data: consents = [] } = useQuery({
+  const { data: consents = [], isLoading: loadingConsents } = useQuery({
     queryKey: ["consents"],
     queryFn: consentService.list,
   });
 
-  const { data: records = [] } = useQuery({
+  const { data: records = [], isLoading: loadingRecords } = useQuery({
     queryKey: ["records"],
     queryFn: patientService.listRecords,
   });
 
-  const { data: timeline = [] } = useQuery({
+  const { data: timeline = [], isLoading: loadingTimeline } = useQuery({
     queryKey: ["timeline"],
     queryFn: () => auditService.getTimeline(),
   });
@@ -72,6 +73,10 @@ export function PatientDashboard() {
   }, {} as Record<string, number>);
 
   const chartData = Object.entries(consentDistribution).map(([name, value]) => ({ name, value }));
+
+  if (loadingConsents && loadingRecords && loadingTimeline) {
+    return <PageLoader message="Loading your dashboard..." />;
+  }
 
   return (
     <div className="space-y-6">

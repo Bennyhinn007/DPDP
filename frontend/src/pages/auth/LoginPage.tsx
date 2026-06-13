@@ -5,7 +5,7 @@
  */
 
 import { useState, type FormEvent } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { ShieldCheck, Lock, Mail, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getErrorMessage } from "@/services/api";
@@ -113,6 +113,13 @@ export function LoginPage() {
             <ShieldCheck className="h-3.5 w-3.5 text-success" />
             DPDP Act compliant · Data residency: India
           </div>
+
+          <p className="mt-4 text-center text-sm text-neutral-500">
+            Don&apos;t have an account?{" "}
+            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-700">
+              Register
+            </Link>
+          </p>
         </div>
       </div>
     </div>
