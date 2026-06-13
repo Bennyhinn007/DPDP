@@ -96,7 +96,7 @@ class TestRegistration:
         response = client.post("/api/v1/auth/register", json={
             "email": "user@example.com",
             "password": "SecurePass123",
-            "role": "doctor",  # Not allowed in MVP
+            "role": "superuser",  # Invalid role (not patient/admin/doctor)
             "full_name": "Test User",
         })
         assert response.status_code == 422
