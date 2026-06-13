@@ -1,11 +1,13 @@
 /**
- * Integrity Verification.
+ * Integrity Verification — Premium Implementation.
  *
- * Verify healthcare records against blockchain anchors with visual status badges.
+ * Blockchain-powered record integrity verification with visual status,
+ * network monitoring, transaction details, and verification statistics.
  */
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -15,28 +17,34 @@ import {
   Box,
   CheckCircle2,
   XCircle,
+  Wifi,
+  Copy,
+  RefreshCw,
+  Lock,
 } from "lucide-react";
 import { patientService } from "@/services/patientService";
 import { integrityService } from "@/services/integrityService";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatCard } from "@/components/shared/StatCard";
 import { truncateHash, formatDateTime, humanize } from "@/lib/utils";
 import type { VerificationResult } from "@/types";
 
 const STATUS_CONFIG: Record<
   VerificationResult["status"],
-  { label: string; variant: "success" | "warning" | "danger" | "neutral"; icon: typeof ShieldCheck }
+  { label: string; variant: "success" | "warning" | "danger" | "neutral"; icon: typeof ShieldCheck; color: string }
 > = {
-  VERIFIED: { label: "Verified", variant: "success", icon: ShieldCheck },
-  VERIFIED_MODIFIED: { label: "Verified (Modified)", variant: "warning", icon: ShieldCheck },
-  VERIFIED_REDACTED: { label: "Verified (Redacted)", variant: "warning", icon: ShieldCheck },
-  INTEGRITY_VIOLATION: { label: "Integrity Violation", variant: "danger", icon: ShieldX },
-  NO_ANCHOR: { label: "No Anchor", variant: "neutral", icon: ShieldAlert },
+  VERIFIED: { label: "Verified", variant: "success", icon: ShieldCheck, color: "#10B981" },
+  VERIFIED_MODIFIED: { label: "Authorized Modification", variant: "warning", icon: ShieldCheck, color: "#F59E0B" },
+  VERIFIED_REDACTED: { label: "Lawfully Redacted", variant: "neutral", icon: Lock, color: "#2563EB" },
+  INTEGRITY_VIOLATION: { label: "Integrity Violation", variant: "danger", icon: ShieldX, color: "#EF4444" },
+  NO_ANCHOR: { label: "No Anchor", variant: "neutral", icon: ShieldAlert, color: "#9CA3AF" },
 };
 
 export function IntegrityVerification() {
   const [results, setResults] = useState<Record<string, VerificationResult>>({});
+  const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
   const { data: records = [] } = useQuery({
     queryKey: ["records"],
@@ -59,140 +67,203 @@ export function IntegrityVerification() {
     records.forEach((r) => verifyMutation.mutate(r._id));
   };
 
+  const copyHash = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+    setCopiedHash(hash);
+    setTimeout(() => setCopiedHash(null), 2000);
+  };
+
+  // Compute stats from results
+  const verified = Object.values(results).filter((r) => r.status === "VERIFIED").length;
+  const modified = Object.values(results).filter((r) => r.status === "VERIFIED_MODIFIED").length;
+  const redacted = Object.values(results).filter((r) => r.status === "VERIFIED_REDACTED").length;
+  const violations = Object.values(results).filter((r) => r.status === "INTEGRITY_VIOLATION").length;
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-800">Data Integrity Verification</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Verify your records against blockchain-anchored hashes
+            Verify healthcare records against blockchain-anchored SHA-256 hashes
           </p>
         </div>
-        <Button onClick={verifyAll} disabled={records.length === 0}>
-          <ShieldCheck className="h-4 w-4" />
+        <Button onClick={verifyAll} disabled={records.length === 0 || verifyMutation.isPending}>
+          <RefreshCw className={`h-4 w-4 ${verifyMutation.isPending ? "animate-spin" : ""}`} />
           Verify All Records
         </Button>
       </div>
 
-      {/* Blockchain status */}
+      {/* Stats row */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Anchored Records" value={status?.total_anchors ?? 0} icon={Link2} variant="primary" />
+        <StatCard label="Verified" value={verified} icon={ShieldCheck} variant="success" />
+        <StatCard label="Modified" value={modified + redacted} icon={ShieldAlert} variant="warning" />
+        <StatCard label="Violations" value={violations} icon={ShieldX} variant="secondary" />
+      </div>
+
+      {/* Blockchain network status */}
       <Card>
-        <CardContent className="flex flex-wrap items-center gap-6 p-4">
-          <div className="flex items-center gap-2">
-            <div className={`h-2.5 w-2.5 rounded-full ${status?.connected ? "bg-success" : "bg-danger"}`} />
-            <span className="text-sm font-medium text-neutral-700">
-              Ganache {status?.connected ? "Connected" : "Disconnected"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-neutral-500">
-            <Box className="h-4 w-4" />
-            Block #{status?.block_number ?? "—"}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-neutral-500">
-            <Link2 className="h-4 w-4" />
-            {status?.total_anchors ?? 0} total anchors
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Wifi className={`h-4 w-4 ${status?.connected ? "text-success" : "text-danger"}`} />
+                <span className="text-sm font-medium text-neutral-700">
+                  {status?.connected ? "Connected" : "Disconnected"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-neutral-500">
+                <span className="font-medium text-neutral-600">Network:</span> Ganache (Local Ethereum)
+              </div>
+              <div className="flex items-center gap-2 text-sm text-neutral-500">
+                <span className="font-medium text-neutral-600">Chain ID:</span> 1337
+              </div>
+              <div className="flex items-center gap-2 text-sm text-neutral-500">
+                <Box className="h-3.5 w-3.5" />
+                <span className="font-medium text-neutral-600">Block:</span> #{status?.block_number ?? "—"}
+              </div>
+            </div>
+            <Badge variant={status?.connected ? "success" : "danger"}>
+              {status?.connected ? "● Live" : "● Offline"}
+            </Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* Records to verify */}
-      <div className="space-y-4">
+      {/* Verification results */}
+      <div className="space-y-3">
         {records.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-sm text-neutral-400">
-              No records to verify
+            <CardContent className="py-16 text-center">
+              <ShieldCheck className="mx-auto h-12 w-12 text-neutral-300" />
+              <p className="mt-4 text-sm text-neutral-400">No healthcare records to verify</p>
             </CardContent>
           </Card>
         ) : (
-          records.map((rec) => {
+          records.map((rec, i) => {
             const result = results[rec._id];
+            const config = result ? STATUS_CONFIG[result.status] : null;
+
             return (
-              <Card key={rec._id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">
-                      {rec.title}
-                      <span className="ml-2 text-xs font-normal text-neutral-400">
-                        {humanize(rec.record_type)} · v{rec.version}
-                      </span>
-                    </CardTitle>
-                    {result ? (
-                      <StatusBadge status={result.status} />
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => verifyMutation.mutate(rec._id)}
-                        disabled={verifyMutation.isPending}
-                      >
-                        Verify
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                {result && (
-                  <CardContent>
-                    <p className="mb-4 text-sm text-neutral-600">{result.message}</p>
-
-                    {/* Hash comparison cards */}
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <HashCard
-                        label="Current Hash"
-                        value={result.current_hash}
-                        icon={Hash}
-                      />
-                      <HashCard
-                        label="Blockchain Hash"
-                        value={result.blockchain_hash}
-                        icon={Link2}
-                      />
-                      <HashCard
-                        label="Transaction Hash"
-                        value={result.transaction_hash}
-                        icon={Hash}
-                      />
-                      <div className="rounded-lg border border-neutral-200 p-3">
-                        <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-                          <Box className="h-3.5 w-3.5" />
-                          Block Number
+              <motion.div
+                key={rec._id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+              >
+                <Card className="overflow-hidden">
+                  <div className="flex items-stretch">
+                    {/* Status color bar */}
+                    <div
+                      className="w-1.5 flex-shrink-0"
+                      style={{ backgroundColor: config?.color ?? "#E5E7EB" }}
+                    />
+                    <div className="flex-1 p-4">
+                      {/* Record header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100">
+                            {config ? (
+                              <config.icon className="h-4 w-4" style={{ color: config.color }} />
+                            ) : (
+                              <Hash className="h-4 w-4 text-neutral-400" />
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-sm font-semibold text-neutral-800">{rec.title}</span>
+                            <div className="flex items-center gap-2 text-xs text-neutral-400">
+                              <Badge variant="neutral">{humanize(rec.record_type)}</Badge>
+                              <span>v{rec.version}</span>
+                              <span>·</span>
+                              <span>{formatDateTime(rec.created_at)}</span>
+                            </div>
+                          </div>
                         </div>
-                        <p className="mt-1 font-mono text-sm text-neutral-800">
-                          {result.block_number ?? "—"}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          {config && <Badge variant={config.variant}>{config.label}</Badge>}
+                          {!result && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => verifyMutation.mutate(rec._id)}
+                              disabled={verifyMutation.isPending}
+                            >
+                              Verify
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Match indicator */}
-                    <div className="mt-4 flex items-center gap-2 rounded-md bg-neutral-50 px-3 py-2">
-                      {result.current_hash === result.blockchain_hash ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                          <span className="text-sm text-success">Hashes match — record intact</span>
-                        </>
-                      ) : result.status.startsWith("VERIFIED") ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-warning" />
-                          <span className="text-sm text-warning">
-                            Authorized modification — chameleon proof valid
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-4 w-4 text-danger" />
-                          <span className="text-sm text-danger">
-                            Hash mismatch — possible tampering
-                          </span>
-                        </>
+                      {/* Verification details */}
+                      {result && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="mt-4 border-t border-neutral-100 pt-4"
+                        >
+                          <p className="mb-3 text-sm text-neutral-600">{result.message}</p>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <HashCell
+                              label="Current Hash"
+                              value={result.current_hash}
+                              onCopy={copyHash}
+                              copied={copiedHash === result.current_hash}
+                            />
+                            <HashCell
+                              label="Blockchain Hash"
+                              value={result.blockchain_hash}
+                              onCopy={copyHash}
+                              copied={copiedHash === result.blockchain_hash}
+                            />
+                            <HashCell
+                              label="Transaction"
+                              value={result.transaction_hash}
+                              onCopy={copyHash}
+                              copied={copiedHash === result.transaction_hash}
+                            />
+                            <div className="rounded-md bg-neutral-50 p-2.5">
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+                                Block Number
+                              </span>
+                              <p className="mt-1 font-mono text-sm font-semibold text-neutral-800">
+                                #{result.block_number ?? "—"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Hash match indicator */}
+                          <div className="mt-3 flex items-center gap-2 rounded-md border border-neutral-100 px-3 py-2">
+                            {result.current_hash === result.blockchain_hash ? (
+                              <>
+                                <CheckCircle2 className="h-4 w-4 text-success" />
+                                <span className="text-xs font-medium text-success">
+                                  Hashes match — record integrity confirmed
+                                </span>
+                              </>
+                            ) : result.status.startsWith("VERIFIED") ? (
+                              <>
+                                <CheckCircle2 className="h-4 w-4 text-primary-600" />
+                                <span className="text-xs font-medium text-primary-600">
+                                  Authorized modification — chameleon hash proof valid
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-4 w-4 text-danger" />
+                                <span className="text-xs font-medium text-danger">
+                                  Hash mismatch — possible unauthorized modification
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
                       )}
                     </div>
-
-                    {result.verified_at && (
-                      <p className="mt-2 text-xs text-neutral-400">
-                        Verified {formatDateTime(result.verified_at)}
-                      </p>
-                    )}
-                  </CardContent>
-                )}
-              </Card>
+                  </div>
+                </Card>
+              </motion.div>
             );
           })
         )}
@@ -201,35 +272,34 @@ export function IntegrityVerification() {
   );
 }
 
-function StatusBadge({ status }: { status: VerificationResult["status"] }) {
-  const config = STATUS_CONFIG[status];
-  const Icon = config.icon;
-  return (
-    <Badge variant={config.variant} className="flex items-center gap-1">
-      <Icon className="h-3.5 w-3.5" />
-      {config.label}
-    </Badge>
-  );
-}
-
-function HashCard({
+function HashCell({
   label,
   value,
-  icon: Icon,
+  onCopy,
+  copied,
 }: {
   label: string;
   value: string | undefined;
-  icon: typeof Hash;
+  onCopy: (v: string) => void;
+  copied: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 p-3">
-      <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
+    <div className="group rounded-md bg-neutral-50 p-2.5">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-neutral-400">{label}</span>
+      <div className="mt-1 flex items-center gap-1">
+        <p className="font-mono text-xs text-neutral-700" title={value}>
+          {truncateHash(value, 6)}
+        </p>
+        {value && (
+          <button
+            onClick={() => onCopy(value)}
+            className="ml-auto rounded p-0.5 text-neutral-300 opacity-0 transition-opacity hover:text-neutral-500 group-hover:opacity-100"
+            aria-label="Copy hash"
+          >
+            {copied ? <CheckCircle2 className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+          </button>
+        )}
       </div>
-      <p className="mt-1 font-mono text-sm text-neutral-800" title={value}>
-        {truncateHash(value, 8)}
-      </p>
     </div>
   );
 }

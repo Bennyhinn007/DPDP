@@ -55,6 +55,7 @@ function App() {
             >
               <Route path="/dpo" element={<DPODashboard />} />
               <Route path="/dpo/compliance" element={<ComplianceDashboard />} />
+              <Route path="/compliance" element={<ComplianceDashboard />} />
               <Route path="/admin/users" element={<PlaceholderPage title="User Management" />} />
             </Route>
 
