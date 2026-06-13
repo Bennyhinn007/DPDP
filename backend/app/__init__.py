@@ -38,6 +38,14 @@ def create_app(config_name: str = "development") -> Flask:
     # Initialize extensions (MongoDB, Web3)
     init_extensions(app)
 
+    # Swagger API documentation
+    try:
+        from flasgger import Swagger
+        from app.swagger_config import SWAGGER_TEMPLATE, SWAGGER_CONFIG
+        Swagger(app, template=SWAGGER_TEMPLATE, config=SWAGGER_CONFIG)
+    except ImportError:
+        pass  # flasgger optional in test environment
+
     # Register blueprints
     _register_blueprints(app)
 
