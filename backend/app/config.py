@@ -65,6 +65,7 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     TESTING = False
     MONGO_DB_NAME = "dpdp_healthcare_dev"
+    ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY", "ALqZ-f2S9tSruxC8YlTTInzGCYgFkTFztlerw8nxsyk=")
 
 
 class TestingConfig(BaseConfig):

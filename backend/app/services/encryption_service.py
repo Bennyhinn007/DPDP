@@ -118,27 +118,27 @@ class EncryptionService:
 
         Attempts to parse JSON for complex types.
         Returns plaintext value.
-
-        Args:
-            encrypted_value: Fernet-encrypted base64 string
-
-        Returns:
-            Decrypted value (str, list, dict, etc.), or "[DECRYPTION_FAILED]" on error
         """
         if encrypted_value is None:
             return None
 
         if not isinstance(encrypted_value, str):
-            return encrypted_value  # Already plaintext (not encrypted)
+            return encrypted_value
+
+        # Plaintext value (legacy records)
+        if not encrypted_value.startswith("gAAAA"):
+            return encrypted_value
 
         try:
-            decrypted_bytes = self._fernet.decrypt(encrypted_value.encode("utf-8"))
+            decrypted_bytes = self._fernet.decrypt(
+                encrypted_value.encode("utf-8")
+            )
             plaintext = decrypted_bytes.decode("utf-8")
-        except (InvalidToken, Exception):
+        except InvalidToken:
             return "[DECRYPTION_FAILED]"
 
-        # Try JSON parse for structured data
         import json
+
         try:
             return json.loads(plaintext)
         except (json.JSONDecodeError, ValueError):

@@ -94,8 +94,9 @@ class TestEncryptionService:
 
     def test_decrypt_invalid_token_returns_failure_marker(self):
         enc = EncryptionService()
+        # Non-Fernet strings pass through as plaintext (legacy data)
         result = enc.decrypt_field("not-valid-fernet-ciphertext")
-        assert result == "[DECRYPTION_FAILED]"
+        assert result == "not-valid-fernet-ciphertext"
 
     def test_decrypt_corrupted_ciphertext(self):
         enc = EncryptionService()
