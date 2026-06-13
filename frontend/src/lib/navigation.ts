@@ -11,6 +11,8 @@ import {
   BarChart3,
   PieChart,
   Users,
+  Stethoscope,
+  Fingerprint,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/types";
@@ -52,6 +54,18 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/verify",
     icon: FileCheck,
     roles: ["patient"],
+  },
+  {
+    label: "Chameleon Hash",
+    path: "/chameleon-hash",
+    icon: Fingerprint,
+    roles: ["patient"],
+  },
+  {
+    label: "Doctor Dashboard",
+    path: "/doctor",
+    icon: Stethoscope,
+    roles: ["doctor"],
   },
   {
     label: "Compliance Dashboard",

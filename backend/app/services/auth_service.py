@@ -205,7 +205,7 @@ class AuthService:
         if not password or len(password) < 8:
             errors["password"] = "Password must be at least 8 characters"
 
-        allowed_roles = [UserRole.PATIENT.value, UserRole.ADMIN.value]
+        allowed_roles = [UserRole.PATIENT.value, UserRole.ADMIN.value, UserRole.DOCTOR.value]
         if role not in allowed_roles:
             errors["role"] = f"Role must be one of: {allowed_roles}"
 

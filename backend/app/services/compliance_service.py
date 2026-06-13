@@ -293,17 +293,20 @@ class ComplianceService:
         """Score DPDP rights fulfillment (max 15 points)."""
         score = 0
 
-        # Right to access: patients can view data (assumed if system running)
-        score += 5
-
-        # Right to correction: version_history has corrections
-        if self._count_corrections() > 0 or self.db["patients"].count_documents({}) > 0:
+        # Right to access: patients can view data (5 points if patients exist)
+        if self.db["patients"].count_documents({}) > 0:
             score += 5
 
-        # Right to erasure: system supports redaction
-        if "chameleon_hash_records" in self.db.list_collection_names():
+        # Right to correction: version_history has actual corrections (5 points)
+        if self._count_corrections() > 0:
             score += 5
-        elif self.db["healthcare_records"].count_documents({"redacted": True}) >= 0:
+        elif self.db["patients"].count_documents({}) == 0:
+            score += 5  # No patients = nothing to correct = compliant
+
+        # Right to erasure: actual erasures performed OR system supports it (5 points)
+        if self._count_erasures() > 0:
+            score += 5
+        elif "chameleon_hash_records" in self.db.list_collection_names() and self.db["chameleon_hash_records"].count_documents({}) > 0:
             score += 5
 
         return min(15, score)

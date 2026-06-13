@@ -16,7 +16,9 @@ import { PersonalDataCenter } from "@/pages/patient/PersonalDataCenter";
 import { ConsentCenter } from "@/pages/patient/ConsentCenter";
 import { AuditTimeline } from "@/pages/patient/AuditTimeline";
 import { IntegrityVerification } from "@/pages/patient/IntegrityVerification";
+import { ChameleonHashCenter } from "@/pages/patient/ChameleonHashCenter";
 import { DPODashboard } from "@/pages/dpo/DPODashboard";
+import { DoctorDashboard } from "@/pages/doctor/DoctorDashboard";
 import { ComplianceDashboard } from "@/pages/dpo/ComplianceDashboard";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { UnauthorizedPage } from "@/pages/UnauthorizedPage";
@@ -45,6 +47,18 @@ function App() {
               <Route path="/consents" element={<ConsentCenter />} />
               <Route path="/timeline" element={<AuditTimeline />} />
               <Route path="/verify" element={<IntegrityVerification />} />
+              <Route path="/chameleon-hash" element={<ChameleonHashCenter />} />
+            </Route>
+
+            {/* Protected (doctor) */}
+            <Route
+              element={
+                <ProtectedRoute allowedRoles={["doctor"]}>
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/doctor" element={<DoctorDashboard />} />
             </Route>
 
             {/* Protected (admin/dpo) */}
