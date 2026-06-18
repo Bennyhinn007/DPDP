@@ -35,6 +35,17 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
+            {/* Shared (all authenticated roles) */}
+            <Route
+              element={
+                <ProtectedRoute allowedRoles={["patient", "doctor", "admin", "dpo"]}>
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+
             {/* Protected (patient) */}
             <Route
               element={
@@ -49,7 +60,6 @@ function App() {
               <Route path="/timeline" element={<AuditTimeline />} />
               <Route path="/verify" element={<IntegrityVerification />} />
               <Route path="/chameleon-hash" element={<ChameleonHashCenter />} />
-              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
             {/* Protected (doctor) */}
@@ -61,7 +71,6 @@ function App() {
               }
             >
               <Route path="/doctor" element={<DoctorDashboard />} />
-              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
             {/* Protected (admin/dpo) */}
@@ -76,7 +85,6 @@ function App() {
               <Route path="/dpo/compliance" element={<ComplianceDashboard />} />
               <Route path="/compliance" element={<ComplianceDashboard />} />
               <Route path="/admin/users" element={<IdentityGovernance />} />
-              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
             {/* Defaults */}
