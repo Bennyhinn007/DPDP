@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LogOut, User as UserIcon, ChevronDown, Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "./NotificationBell";
@@ -16,6 +17,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (!user) return null;
@@ -61,7 +63,10 @@ export function Header({ onMenuClick }: HeaderProps) {
                   <div className="text-xs text-neutral-400">{user.email}</div>
                 </div>
                 <div className="p-1">
-                  <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50">
+                  <button
+                    onClick={() => { setMenuOpen(false); navigate("/profile"); }}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50"
+                  >
                     <UserIcon className="h-4 w-4" />
                     Profile
                   </button>

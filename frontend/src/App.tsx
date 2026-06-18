@@ -21,6 +21,7 @@ import { DPODashboard } from "@/pages/dpo/DPODashboard";
 import { DoctorDashboard } from "@/pages/doctor/DoctorDashboard";
 import { ComplianceDashboard } from "@/pages/dpo/ComplianceDashboard";
 import { IdentityGovernance } from "@/pages/admin/IdentityGovernance";
+import { ProfilePage } from "@/pages/shared/ProfilePage";
 import { UnauthorizedPage } from "@/pages/UnauthorizedPage";
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
               <Route path="/timeline" element={<AuditTimeline />} />
               <Route path="/verify" element={<IntegrityVerification />} />
               <Route path="/chameleon-hash" element={<ChameleonHashCenter />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
             {/* Protected (doctor) */}
@@ -59,6 +61,7 @@ function App() {
               }
             >
               <Route path="/doctor" element={<DoctorDashboard />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
             {/* Protected (admin/dpo) */}
@@ -73,6 +76,7 @@ function App() {
               <Route path="/dpo/compliance" element={<ComplianceDashboard />} />
               <Route path="/compliance" element={<ComplianceDashboard />} />
               <Route path="/admin/users" element={<IdentityGovernance />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
             {/* Defaults */}
