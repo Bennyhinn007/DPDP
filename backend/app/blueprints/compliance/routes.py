@@ -71,3 +71,23 @@ def get_compliance_score():
     svc = _get_compliance_service()
     score = svc.get_compliance_score()
     return jsonify({"compliance_score": score}), 200
+
+
+# ─────────────────────────────────────────────────────────────────────
+# IDENTITY GOVERNANCE
+# ─────────────────────────────────────────────────────────────────────
+
+@compliance_bp.route("/governance", methods=["GET"])
+@jwt_required
+@roles_required("admin")
+def get_governance_data():
+    """
+    Get Identity & Access Governance data.
+
+    Returns user directory, lifecycle metrics, access security,
+    and healthcare relationships for the admin governance center.
+    """
+    from app.services.admin_service import AdminService
+    svc = AdminService(get_db())
+    data = svc.get_governance_data()
+    return jsonify({"governance": data}), 200
