@@ -20,7 +20,7 @@ import { ChameleonHashCenter } from "@/pages/patient/ChameleonHashCenter";
 import { DPODashboard } from "@/pages/dpo/DPODashboard";
 import { DoctorDashboard } from "@/pages/doctor/DoctorDashboard";
 import { ComplianceDashboard } from "@/pages/dpo/ComplianceDashboard";
-import { PlaceholderPage } from "@/pages/PlaceholderPage";
+import { IdentityGovernance } from "@/pages/admin/IdentityGovernance";
 import { UnauthorizedPage } from "@/pages/UnauthorizedPage";
 
 function App() {
@@ -72,7 +72,7 @@ function App() {
               <Route path="/dpo" element={<DPODashboard />} />
               <Route path="/dpo/compliance" element={<ComplianceDashboard />} />
               <Route path="/compliance" element={<ComplianceDashboard />} />
-              <Route path="/admin/users" element={<PlaceholderPage title="User Management" />} />
+              <Route path="/admin/users" element={<IdentityGovernance />} />
             </Route>
 
             {/* Defaults */}
