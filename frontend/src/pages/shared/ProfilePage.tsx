@@ -8,6 +8,7 @@
  * - Healthcare summary (patient)
  */
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -30,10 +31,12 @@ import { auditService } from "@/services/auditService";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageLoader } from "@/components/shared/PageLoader";
+import { MFASetupPanel } from "@/components/mfa/MFASetupPanel";
 import { formatDateTime, humanize } from "@/lib/utils";
 
 export function ProfilePage() {
   const { user } = useAuth();
+  const [mfaState, setMfaState] = useState(false);
 
   const { isLoading: profileLoading } = useQuery({
     queryKey: ["profile"],
@@ -65,7 +68,8 @@ export function ProfilePage() {
   const activeConsents = consents.filter((c) => c.status === "active").length;
 
   // Security Score computation
-  const securityScore = computeSecurityScore(user);
+  const isMfaEnabled = user.mfa_enabled || mfaState;
+  const securityScore = computeSecurityScore({ ...user, mfa_enabled: isMfaEnabled });
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -92,7 +96,7 @@ export function ProfilePage() {
                   {user.role === "admin" ? "Admin (DPO)" : humanize(user.role)}
                 </Badge>
                 <Badge variant="success">Active</Badge>
-                {user.mfa_enabled && (
+                {(user.mfa_enabled || mfaState) && (
                   <Badge variant="success">
                     <Key className="mr-1 h-3 w-3" />
                     MFA Enabled
@@ -155,7 +159,7 @@ export function ProfilePage() {
           <CardContent className="space-y-3">
             <SecurityRow label="Authentication" value="JWT (HS256)" ok />
             <SecurityRow label="Encryption" value="AES-256-GCM" ok />
-            <SecurityRow label="MFA" value={user.mfa_enabled ? "Enabled" : "Not configured"} ok={user.mfa_enabled} />
+            <SecurityRow label="MFA" value={isMfaEnabled ? "Enabled" : "Not configured"} ok={isMfaEnabled} />
             <SecurityRow label="Account Status" value="Active" ok />
             <SecurityRow label="Data Residency" value="India (DPDP)" ok />
             <SecurityRow label="Password Strength" value="Strong (8+ chars, bcrypt)" ok />
@@ -177,12 +181,18 @@ export function ProfilePage() {
         <CardContent>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <ScoreComponent label="Strong Password" points={25} maxPoints={25} />
-            <ScoreComponent label="MFA Status" points={user.mfa_enabled ? 25 : 0} maxPoints={25} />
+            <ScoreComponent label="MFA Status" points={isMfaEnabled ? 25 : 0} maxPoints={25} />
             <ScoreComponent label="Recent Login" points={user.last_login ? 25 : 0} maxPoints={25} />
             <ScoreComponent label="No Failed Logins" points={25} maxPoints={25} />
           </div>
         </CardContent>
       </Card>
+
+      {/* MFA Setup Panel */}
+      <MFASetupPanel
+        mfaEnabled={user.mfa_enabled || mfaState}
+        onMFAChange={() => setMfaState((prev) => !prev)}
+      />
 
       {/* Patient-specific: Records + Consents + Activity */}
       {user.role === "patient" && (
