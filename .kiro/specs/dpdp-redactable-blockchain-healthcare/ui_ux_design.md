@@ -162,7 +162,7 @@
 
 | Attribute | Description |
 |-----------|-------------|
-| **Name** | Anjali Desai, DPO, 45 |
+| **Name** | Dr. Kaushalya, DPO, 45 |
 | **Tech Level** | High (legal + technical background) |
 | **Goals** | Ensure DPDP compliance, manage breaches, authorize redactions, handle grievances |
 | **Pain Points** | Volume of events, SLA pressure, regulatory reporting |

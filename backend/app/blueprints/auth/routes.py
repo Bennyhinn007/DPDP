@@ -201,3 +201,104 @@ def patient_only():
         "user_id": g.current_user_id,
         "role": g.current_user_role,
     }), 200
+
+
+# ─────────────────────────────────────────────────────────────────────
+# MFA (Google Authenticator)
+# ─────────────────────────────────────────────────────────────────────
+
+@auth_bp.route("/mfa/setup", methods=["POST"])
+@jwt_required
+def mfa_setup():
+    """
+    Generate MFA secret and QR code for Google Authenticator.
+
+    Returns provisioning URI and QR code (base64 PNG).
+    """
+    from app.services.mfa_service import MFAService
+    from app.services.audit_service import AuditService
+
+    svc = MFAService(get_db())
+    result = svc.setup_mfa(g.current_user_id)
+
+    # Audit
+    audit = AuditService(get_db())
+    audit.log_event(
+        actor_id=g.current_user_id,
+        actor_role=g.current_user_role,
+        action_type="update",
+        resource_type="mfa",
+        resource_id=g.current_user_id,
+        reason="MFA setup initiated",
+        source_ip=request.remote_addr,
+    )
+
+    return jsonify(result), 200
+
+
+@auth_bp.route("/mfa/verify", methods=["POST"])
+@jwt_required
+def mfa_verify():
+    """
+    Verify TOTP code and enable MFA.
+
+    Body: { "code": "123456" }
+    """
+    from app.services.mfa_service import MFAService
+    from app.services.audit_service import AuditService
+
+    data = request.get_json()
+    if not data or not data.get("code"):
+        raise ValidationError("6-digit code required")
+
+    svc = MFAService(get_db())
+    result = svc.verify_and_enable(g.current_user_id, data["code"])
+
+    # Audit
+    audit = AuditService(get_db())
+    audit.log_event(
+        actor_id=g.current_user_id,
+        actor_role=g.current_user_role,
+        action_type="update",
+        resource_type="mfa",
+        resource_id=g.current_user_id,
+        reason="MFA enabled successfully",
+        severity="warning",
+        source_ip=request.remote_addr,
+    )
+
+    return jsonify(result), 200
+
+
+@auth_bp.route("/mfa/disable", methods=["POST"])
+@jwt_required
+def mfa_disable():
+    """
+    Disable MFA (requires valid TOTP code).
+
+    Body: { "code": "123456" }
+    """
+    from app.services.mfa_service import MFAService
+    from app.services.audit_service import AuditService
+
+    data = request.get_json()
+    if not data or not data.get("code"):
+        raise ValidationError("6-digit code required to disable MFA")
+
+    svc = MFAService(get_db())
+    result = svc.disable_mfa(g.current_user_id, data["code"])
+
+    # Audit
+    audit = AuditService(get_db())
+    audit.log_event(
+        actor_id=g.current_user_id,
+        actor_role=g.current_user_role,
+        action_type="update",
+        resource_type="mfa",
+        resource_id=g.current_user_id,
+        reason="MFA disabled",
+        severity="critical",
+        source_ip=request.remote_addr,
+    )
+
+    return jsonify(result), 200

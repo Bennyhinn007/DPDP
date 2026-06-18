@@ -78,9 +78,9 @@ export function DPODashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-800">DPO Command Center</h1>
+          <h1 className="text-2xl font-bold text-neutral-800">Compliance & Governance Center</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Data Protection Officer — Compliance Operations Overview
+            Administrative compliance oversight and data protection governance
           </p>
         </div>
         <Badge variant="success" className="flex items-center gap-1 px-3 py-1.5">

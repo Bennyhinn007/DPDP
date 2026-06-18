@@ -94,7 +94,7 @@ Open: http://localhost:5173
 ### 8. DPO/Admin Dashboard (1 min)
 
 - Login as admin: `admin@dpdp-health.in` / `Admin@Secure123`
-- Show DPO Command Center:
+- Show Compliance & Governance Center:
   - Compliance Score gauge
   - System metrics (patients, records, anchors)
   - Rights requests (corrections/erasures count)

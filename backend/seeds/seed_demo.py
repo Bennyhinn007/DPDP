@@ -68,7 +68,7 @@ def seed():
         print("Creating users...")
 
         # Admin
-        admin = auth.register("admin@dpdp-health.in", "Admin@Secure123", "admin", "Dr. Anjali Desai (DPO)")
+        admin = auth.register("admin@dpdp-health.in", "Admin@Secure123", "admin", "Dr. Kaushalya (DPO)")
         print(f"  ✓ Admin: admin@dpdp-health.in / Admin@Secure123")
 
         # Patient 1
