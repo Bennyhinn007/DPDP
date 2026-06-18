@@ -1,31 +1,29 @@
 /**
  * Notification Bell.
  *
- * Header notification indicator with dropdown panel.
+ * Displays recent audit events as notifications.
  */
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
+import { auditService } from "@/services/auditService";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  time: string;
-  unread: boolean;
-}
-
-// Demo notifications (replace with real API in feature phase)
-const DEMO_NOTIFICATIONS: Notification[] = [
-  { id: "1", title: "Record accessed", message: "Your medical history was viewed by Dr. Sharma", time: "2h ago", unread: true },
-  { id: "2", title: "Consent expiring", message: "Pharmacy Access consent expires in 7 days", time: "1d ago", unread: true },
-  { id: "3", title: "Integrity verified", message: "All records passed verification", time: "2d ago", unread: false },
-];
-
 export function NotificationBell() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const unreadCount = DEMO_NOTIFICATIONS.filter((n) => n.unread).length;
+
+  const { data: events = [] } = useQuery({
+    queryKey: ["notifications-bell"],
+    queryFn: () => auditService.getTimeline(),
+    enabled: user?.role === "patient",
+    staleTime: 60_000,
+  });
+
+  const recentEvents = events.slice(0, 5);
+  const unreadCount = Math.min(recentEvents.length, 3);
 
   return (
     <div className="relative">
@@ -47,24 +45,29 @@ export function NotificationBell() {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-neutral-200 bg-white shadow-lg">
             <div className="border-b border-neutral-200 px-4 py-3">
-              <h3 className="text-sm font-semibold text-neutral-800">Notifications</h3>
+              <h3 className="text-sm font-semibold text-neutral-800">Recent Activity</h3>
             </div>
             <div className="max-h-80 overflow-y-auto">
-              {DEMO_NOTIFICATIONS.map((n) => (
-                <div
-                  key={n.id}
-                  className={cn(
-                    "border-b border-neutral-100 px-4 py-3 hover:bg-neutral-50",
-                    n.unread && "bg-primary-50/30"
-                  )}
-                >
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm font-medium text-neutral-800">{n.title}</span>
-                    <span className="text-xs text-neutral-400">{n.time}</span>
+              {recentEvents.length === 0 ? (
+                <div className="px-4 py-6 text-center text-xs text-neutral-400">No recent events</div>
+              ) : (
+                recentEvents.map((event) => (
+                  <div
+                    key={event._id}
+                    className={cn("border-b border-neutral-100 px-4 py-3 hover:bg-neutral-50")}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className="text-sm font-medium text-neutral-800">
+                        {event.action_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </span>
+                      <span className="text-xs text-neutral-400">
+                        {new Date(event.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-neutral-500">{event.reason}</p>
                   </div>
-                  <p className="mt-0.5 text-xs text-neutral-500">{n.message}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </>
