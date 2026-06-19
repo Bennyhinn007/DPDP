@@ -1,3 +1,12 @@
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![React](https://img.shields.io/badge/React-18-61dafb)
+![Flask](https://img.shields.io/badge/Flask-3.0-black)
+![MongoDB](https://img.shields.io/badge/MongoDB-7-green)
+![Tests](https://img.shields.io/badge/Tests-82_Passing-success)
+![License](https://img.shields.io/badge/Academic_Project-orange)
+
+
+
 # DPDP-Compliant Redactable Blockchain Based Healthcare & Pharmacy Management System
 
 > A production-grade healthcare platform demonstrating compliance with India's Digital Personal Data Protection Act (DPDP Act, 2023) through privacy-first design, consent management, AES-256 encryption, blockchain verification, and Chameleon Hash-based authorized redaction.
