@@ -1,0 +1,164 @@
+.
+├── README.md
+├── backend
+│   ├── Dockerfile
+│   ├── app
+│   │   ├── __init__.py
+│   │   ├── blueprints
+│   │   │   ├── __init__.py
+│   │   │   ├── audit
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   ├── auth
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   ├── blockchain
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   ├── compliance
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   ├── consents
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   ├── doctors
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   ├── integrity
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   ├── patients
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── routes.py
+│   │   │   └── pharmacy
+│   │   │       ├── __init__.py
+│   │   │       └── routes.py
+│   │   ├── config.py
+│   │   ├── db_init.py
+│   │   ├── extensions.py
+│   │   ├── middleware
+│   │   │   ├── __init__.py
+│   │   │   ├── audit_middleware.py
+│   │   │   └── auth_middleware.py
+│   │   ├── services
+│   │   │   ├── __init__.py
+│   │   │   ├── admin_service.py
+│   │   │   ├── audit_service.py
+│   │   │   ├── auth_service.py
+│   │   │   ├── blockchain_service.py
+│   │   │   ├── chameleon_hash_service.py
+│   │   │   ├── compliance_service.py
+│   │   │   ├── consent_service.py
+│   │   │   ├── doctor_service.py
+│   │   │   ├── encryption_service.py
+│   │   │   ├── healthcare_record_service.py
+│   │   │   ├── mfa_service.py
+│   │   │   └── patient_service.py
+│   │   ├── swagger_config.py
+│   │   └── utils
+│   │       ├── __init__.py
+│   │       ├── constants.py
+│   │       ├── errors.py
+│   │       └── helpers.py
+│   ├── requirements.txt
+│   ├── run.py
+│   ├── seeds
+│   │   └── seed_demo.py
+│   └── tests
+│       ├── __init__.py
+│       ├── test_audit.py
+│       ├── test_auth.py
+│       ├── test_blockchain.py
+│       ├── test_chameleon_hash.py
+│       ├── test_chameleon_integration.py
+│       ├── test_compliance.py
+│       ├── test_consents.py
+│       ├── test_encryption.py
+│       └── test_healthcare_records.py
+├── docker-compose.yml
+├── docs
+│   ├── demo-script.md
+│   └── setup-guide.md
+├── frontend
+│   ├── Dockerfile
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── src
+│   │   ├── App.tsx
+│   │   ├── components
+│   │   │   ├── layout
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── NotificationBell.tsx
+│   │   │   │   └── Sidebar.tsx
+│   │   │   ├── mfa
+│   │   │   │   └── MFASetupPanel.tsx
+│   │   │   ├── shared
+│   │   │   │   ├── ComplianceGauge.tsx
+│   │   │   │   ├── ErrorBoundary.tsx
+│   │   │   │   ├── PageLoader.tsx
+│   │   │   │   └── StatCard.tsx
+│   │   │   └── ui
+│   │   │       ├── badge.tsx
+│   │   │       ├── button.tsx
+│   │   │       ├── card.tsx
+│   │   │       ├── dialog.tsx
+│   │   │       ├── input.tsx
+│   │   │       ├── label.tsx
+│   │   │       └── textarea.tsx
+│   │   ├── contexts
+│   │   │   ├── AuthContext.tsx
+│   │   │   └── QueryProvider.tsx
+│   │   ├── layouts
+│   │   │   └── AppShell.tsx
+│   │   ├── lib
+│   │   │   ├── consentMeta.ts
+│   │   │   ├── navigation.ts
+│   │   │   └── utils.ts
+│   │   ├── main.tsx
+│   │   ├── pages
+│   │   │   ├── UnauthorizedPage.tsx
+│   │   │   ├── admin
+│   │   │   │   └── IdentityGovernance.tsx
+│   │   │   ├── auth
+│   │   │   │   ├── LoginPage.tsx
+│   │   │   │   └── RegisterPage.tsx
+│   │   │   ├── doctor
+│   │   │   │   └── DoctorDashboard.tsx
+│   │   │   ├── dpo
+│   │   │   │   ├── ComplianceDashboard.tsx
+│   │   │   │   └── DPODashboard.tsx
+│   │   │   ├── patient
+│   │   │   │   ├── AuditTimeline.tsx
+│   │   │   │   ├── ChameleonHashCenter.tsx
+│   │   │   │   ├── ConsentCenter.tsx
+│   │   │   │   ├── IntegrityVerification.tsx
+│   │   │   │   ├── PatientDashboard.tsx
+│   │   │   │   └── PersonalDataCenter.tsx
+│   │   │   └── shared
+│   │   │       └── ProfilePage.tsx
+│   │   ├── routes
+│   │   │   └── ProtectedRoute.tsx
+│   │   ├── services
+│   │   │   ├── adminService.ts
+│   │   │   ├── api.ts
+│   │   │   ├── auditService.ts
+│   │   │   ├── authService.ts
+│   │   │   ├── complianceService.ts
+│   │   │   ├── consentService.ts
+│   │   │   ├── doctorService.ts
+│   │   │   ├── integrityService.ts
+│   │   │   ├── mfaService.ts
+│   │   │   └── patientService.ts
+│   │   ├── styles
+│   │   │   └── globals.css
+│   │   ├── types
+│   │   │   └── index.ts
+│   │   └── vite-env.d.ts
+│   ├── tailwind.config.ts
+│   ├── tsconfig.json
+│   └── vite.config.ts
+└── structure.txt
+
+40 directories, 122 files
