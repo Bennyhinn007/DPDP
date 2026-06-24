@@ -27,6 +27,9 @@ pyotp==2.9.0
 qrcode==8.0
 Pillow==11.1.0
 
+# PDF Generation
+reportlab==4.3.1
+
 # API Documentation
 flasgger==0.9.7.1
 

@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Pencil, Trash2, ShieldCheck, User, FileText } from "lucide-react";
+import { Pencil, Trash2, ShieldCheck, User, FileText, Eye } from "lucide-react";
 import { patientService } from "@/services/patientService";
 import { getErrorMessage } from "@/services/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ExportDropdown } from "@/components/shared/ExportDropdown";
 import { formatDate, humanize } from "@/lib/utils";
 import type { HealthcareRecord } from "@/types";
 
@@ -23,6 +24,7 @@ export function PersonalDataCenter() {
   const queryClient = useQueryClient();
   const [correctTarget, setCorrectTarget] = useState<HealthcareRecord | null>(null);
   const [eraseTarget, setEraseTarget] = useState<HealthcareRecord | null>(null);
+  const [viewTarget, setViewTarget] = useState<HealthcareRecord | null>(null);
   const [actionMsg, setActionMsg] = useState("");
 
   const { data: profile } = useQuery({
@@ -34,17 +36,6 @@ export function PersonalDataCenter() {
     queryKey: ["records"],
     queryFn: patientService.listRecords,
   });
-
-  const downloadData = () => {
-    const payload = { profile, records, exported_at: new Date().toISOString() };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `my-health-data-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const dataCategories = profile?.allergies?.length
     ? ["Personal Info", "Contact Info", "Medical History", "Allergies"]
@@ -59,10 +50,7 @@ export function PersonalDataCenter() {
             View, manage, and exercise control over your personal data
           </p>
         </div>
-        <Button variant="outline" onClick={downloadData}>
-          <Download className="h-4 w-4" />
-          Download My Data
-        </Button>
+        <ExportDropdown />
       </div>
 
       {actionMsg && (
@@ -140,17 +128,33 @@ export function PersonalDataCenter() {
                   key={rec._id}
                   className="flex items-center justify-between rounded-lg border border-neutral-200 p-4"
                 >
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-neutral-700">{rec.title}</span>
                       {rec.redacted && <Badge variant="danger">Redacted</Badge>}
                       <Badge variant="neutral">{humanize(rec.record_type)}</Badge>
                     </div>
-                    <p className="mt-0.5 text-xs text-neutral-400">
-                      Created {formatDate(rec.created_at)} · v{rec.version}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-neutral-400">
+                      {rec.symptoms && rec.symptoms.length > 0 && rec.symptoms[0] !== "none" && (
+                        <span>{rec.symptoms.join(" • ")}</span>
+                      )}
+                      <span>{formatDate(rec.created_at)}</span>
+                      {rec.verification_hash && (
+                        <span className="flex items-center gap-0.5 text-success">
+                          <ShieldCheck className="h-3 w-3" /> Verified
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewTarget(rec)}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      View
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -201,6 +205,45 @@ export function PersonalDataCenter() {
             queryClient.invalidateQueries({ queryKey: ["records"] });
           }}
         />
+      )}
+
+      {/* View Record Modal */}
+      {viewTarget && (
+        <Dialog open onClose={() => setViewTarget(null)} title={viewTarget.title} className="max-w-lg">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge variant="neutral">{humanize(viewTarget.record_type)}</Badge>
+              <span className="text-xs text-neutral-400">{formatDate(viewTarget.created_at)}</span>
+              {viewTarget.verification_hash && (
+                <Badge variant="success">Blockchain Verified</Badge>
+              )}
+            </div>
+            {viewTarget.description && (
+              <div>
+                <p className="text-xs font-medium text-neutral-500">Description</p>
+                <p className="mt-1 text-sm text-neutral-700">{viewTarget.description}</p>
+              </div>
+            )}
+            {viewTarget.symptoms && viewTarget.symptoms.length > 0 && viewTarget.symptoms[0] !== "none" && (
+              <div>
+                <p className="text-xs font-medium text-neutral-500">Symptoms</p>
+                <p className="mt-1 text-sm text-neutral-700">{viewTarget.symptoms.join(", ")}</p>
+              </div>
+            )}
+            {viewTarget.diagnosis_codes && viewTarget.diagnosis_codes.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-neutral-500">Diagnosis Codes</p>
+                <p className="mt-1 font-mono text-sm text-neutral-700">{viewTarget.diagnosis_codes.join(", ")}</p>
+              </div>
+            )}
+            {viewTarget.treatment_notes && (
+              <div>
+                <p className="text-xs font-medium text-neutral-500">Treatment Notes</p>
+                <p className="mt-1 text-sm text-neutral-700">{viewTarget.treatment_notes}</p>
+              </div>
+            )}
+          </div>
+        </Dialog>
       )}
     </div>
   );

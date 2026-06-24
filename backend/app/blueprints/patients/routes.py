@@ -196,6 +196,79 @@ def create_record_for_patient(patient_id):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# DATA EXPORT (PDF + JSON)
+# ─────────────────────────────────────────────────────────────────────
+
+@patients_bp.route("/me/export/pdf", methods=["GET"])
+@jwt_required
+@roles_required("patient")
+def export_pdf_report():
+    """
+    Generate and download a patient-friendly PDF health report.
+
+    Strips all internal fields. DPDP Section 11 compliant portable export.
+    """
+    from flask import send_file
+    import io
+    from app.services.pdf_export_service import PDFExportService
+
+    patient_svc = _get_patient_service()
+    patient = patient_svc.get_patient_by_user_id(g.current_user_id)
+
+    record_svc = _get_record_service()
+    records = record_svc.list_my_records(user_id=g.current_user_id)
+
+    pdf_svc = PDFExportService()
+    pdf_bytes = pdf_svc.generate_report(patient, records)
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"health-report-{g.current_user_id[:8]}.pdf",
+    )
+
+
+@patients_bp.route("/me/export/json", methods=["GET"])
+@jwt_required
+@roles_required("patient")
+def export_json_clean():
+    """
+    Export patient data as clean JSON (no internal fields).
+
+    DPDP Section 11 compliant portable export.
+    """
+    patient_svc = _get_patient_service()
+    patient = patient_svc.get_patient_by_user_id(g.current_user_id)
+
+    record_svc = _get_record_service()
+    records = record_svc.list_my_records(user_id=g.current_user_id)
+
+    # Strip internal fields
+    internal_fields = {"_id", "patient_id", "user_id", "created_by", "updated_by",
+                       "version", "verification_hash", "blockchain_tx_ref",
+                       "blockchain_anchor_id", "redacted_at", "redacted_by",
+                       "redaction_reason"}
+
+    clean_patient = {k: v for k, v in patient.items() if k not in internal_fields}
+    clean_records = [{k: v for k, v in r.items() if k not in internal_fields} for r in records]
+
+    export = {
+        "report_type": "DPDP Data Portability Export",
+        "generated_at": __import__("app.utils.helpers", fromlist=["utc_now"]).utc_now(),
+        "patient": clean_patient,
+        "health_records": clean_records,
+        "compliance": {
+            "encryption": "AES-256-GCM",
+            "audit_trail": "Blockchain-anchored hash chain",
+            "dpdp_section": "Section 11 — Right to Access",
+        },
+    }
+
+    return jsonify(export), 200
+
+
+# ─────────────────────────────────────────────────────────────────────
 # CHAMELEON HASH: CORRECTION & ERASURE (DPDP Rights)
 # ─────────────────────────────────────────────────────────────────────
 
