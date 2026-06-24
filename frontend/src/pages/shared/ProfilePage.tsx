@@ -32,6 +32,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageLoader } from "@/components/shared/PageLoader";
 import { MFASetupPanel } from "@/components/mfa/MFASetupPanel";
+import { BiometricPanel } from "@/components/mfa/BiometricPanel";
 import { formatDateTime, humanize } from "@/lib/utils";
 
 export function ProfilePage() {
@@ -193,6 +194,9 @@ export function ProfilePage() {
         mfaEnabled={user.mfa_enabled || mfaState}
         onMFAChange={() => setMfaState((prev) => !prev)}
       />
+
+      {/* Biometric Panel (Admin/DPO only) */}
+      {(user.role === "admin" || user.role === "dpo") && <BiometricPanel />}
 
       {/* Patient-specific: Records + Consents + Activity */}
       {user.role === "patient" && (

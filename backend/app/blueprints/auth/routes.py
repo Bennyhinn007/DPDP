@@ -302,3 +302,123 @@ def mfa_disable():
     )
 
     return jsonify(result), 200
+
+
+# ─────────────────────────────────────────────────────────────────────
+# WEBAUTHN (Biometric Enrollment)
+# ─────────────────────────────────────────────────────────────────────
+
+@auth_bp.route("/webauthn/register/begin", methods=["POST"])
+@jwt_required
+@roles_required("admin", "dpo")
+def webauthn_register_begin():
+    """
+    Begin WebAuthn biometric registration (Admin/DPO only).
+
+    Returns PublicKeyCredentialCreationOptions for navigator.credentials.create().
+    """
+    from app.services.webauthn_service import WebAuthnService
+    from app.services.audit_service import AuditService
+
+    auth_service = _get_auth_service()
+    user = auth_service.get_user_by_id(g.current_user_id)
+    if not user:
+        return jsonify({"error": True, "message": "User not found"}), 404
+
+    svc = WebAuthnService(get_db())
+    options = svc.begin_registration(
+        user_id=g.current_user_id,
+        user_name=user["full_name"],
+        user_email=user["email"],
+    )
+
+    return jsonify({"options": options}), 200
+
+
+@auth_bp.route("/webauthn/register/complete", methods=["POST"])
+@jwt_required
+@roles_required("admin", "dpo")
+def webauthn_register_complete():
+    """
+    Complete WebAuthn biometric registration.
+
+    Body: { credential_id, public_key, attestation_object, client_data_json, device_name }
+    """
+    from app.services.webauthn_service import WebAuthnService
+    from app.services.audit_service import AuditService
+
+    data = request.get_json()
+    if not data or not data.get("credential_id"):
+        raise ValidationError("Credential data required")
+
+    svc = WebAuthnService(get_db())
+    result = svc.complete_registration(
+        user_id=g.current_user_id,
+        credential_id=data["credential_id"],
+        public_key=data.get("public_key", ""),
+        attestation_object=data.get("attestation_object", ""),
+        client_data_json=data.get("client_data_json", ""),
+        device_name=data.get("device_name", "Biometric Device"),
+    )
+
+    # Audit
+    audit = AuditService(get_db())
+    audit.log_event(
+        actor_id=g.current_user_id,
+        actor_role=g.current_user_role,
+        action_type="create",
+        resource_type="webauthn",
+        resource_id=result.get("credential_id", ""),
+        reason=f"WebAuthn biometric registered: {data.get('device_name', 'Device')}",
+        severity="warning",
+        source_ip=request.remote_addr,
+    )
+
+    return jsonify(result), 201
+
+
+@auth_bp.route("/webauthn/credentials", methods=["GET"])
+@jwt_required
+def webauthn_list_credentials():
+    """List registered WebAuthn credentials."""
+    from app.services.webauthn_service import WebAuthnService
+
+    svc = WebAuthnService(get_db())
+    credentials = svc.list_credentials(g.current_user_id)
+    has_biometric = svc.has_credentials(g.current_user_id)
+
+    return jsonify({
+        "credentials": credentials,
+        "biometric_enabled": has_biometric,
+        "count": len(credentials),
+    }), 200
+
+
+@auth_bp.route("/webauthn/credentials/<cred_id>", methods=["DELETE"])
+@jwt_required
+@roles_required("admin", "dpo")
+def webauthn_remove_credential(cred_id):
+    """Remove a registered WebAuthn credential."""
+    from app.services.webauthn_service import WebAuthnService
+    from app.services.audit_service import AuditService
+
+    svc = WebAuthnService(get_db())
+    removed = svc.remove_credential(g.current_user_id, cred_id)
+
+    if not removed:
+        return jsonify({"error": True, "message": "Credential not found"}), 404
+
+    # Audit
+    audit = AuditService(get_db())
+    audit.log_event(
+        actor_id=g.current_user_id,
+        actor_role=g.current_user_role,
+        action_type="delete",
+        resource_type="webauthn",
+        resource_id=cred_id,
+        reason="WebAuthn biometric credential removed",
+        severity="warning",
+        source_ip=request.remote_addr,
+    )
+
+    return jsonify({"message": "Credential removed", "id": cred_id}), 200
