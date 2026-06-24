@@ -256,13 +256,40 @@ class AuthService:
         return jwt.encode(payload, self.config.JWT_SECRET_KEY, algorithm=self.config.JWT_ALGORITHM)
 
     def _record_failed_attempt(self, user: dict) -> None:
-        """Record failed login and lock if threshold exceeded."""
+        """Record failed login and lock if threshold exceeded. Role-based lockout durations."""
         attempts = user.get("failed_login_attempts", 0) + 1
-        update = {"failed_login_attempts": attempts, "updated_at": utc_now()}
+        now_str = utc_now()
+        update = {
+            "failed_login_attempts": attempts,
+            "last_failed_attempt": now_str,
+            "updated_at": now_str,
+        }
 
         if attempts >= self.config.MAX_LOGIN_ATTEMPTS:
-            lock_until = datetime.now(timezone.utc) + self.config.ACCOUNT_LOCKOUT_DURATION
+            # Role-based lockout duration
+            role = user.get("role", "patient")
+            if role in ("admin", "dpo"):
+                duration = self.config.LOCKOUT_DURATION_ADMIN
+            elif role == "doctor":
+                duration = self.config.LOCKOUT_DURATION_DOCTOR
+            else:
+                duration = self.config.LOCKOUT_DURATION_PATIENT
+
+            lock_until = datetime.now(timezone.utc) + duration
             update["locked_until"] = lock_until.isoformat()
+
+            # Audit: ACCOUNT_LOCKED
+            from app.services.audit_service import AuditService
+            audit = AuditService(self.db)
+            audit.log_event(
+                actor_id=user["_id"],
+                actor_role=role,
+                action_type="login",
+                resource_type="auth",
+                resource_id=user["_id"],
+                reason=f"Account locked after {attempts} failed attempts. Duration: {int(duration.total_seconds() / 60)} minutes.",
+                severity="critical",
+            )
 
         self.users.update_one({"_id": user["_id"]}, {"$set": update})
 

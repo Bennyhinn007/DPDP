@@ -52,8 +52,11 @@ class BaseConfig:
 
     # Security
     BCRYPT_COST_FACTOR = 12
-    MAX_LOGIN_ATTEMPTS = 5
-    ACCOUNT_LOCKOUT_DURATION = timedelta(minutes=30)
+    MAX_LOGIN_ATTEMPTS = 3
+    LOCKOUT_DURATION_PATIENT = timedelta(minutes=30)
+    LOCKOUT_DURATION_DOCTOR = timedelta(minutes=30)
+    LOCKOUT_DURATION_ADMIN = timedelta(hours=2)
+    ACCOUNT_LOCKOUT_DURATION = timedelta(minutes=30)  # Default fallback
 
     # Blockchain Anchoring
     BLOCKCHAIN_ANCHOR_TIMEOUT = 10  # seconds

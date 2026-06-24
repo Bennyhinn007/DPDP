@@ -91,3 +91,46 @@ def get_governance_data():
     svc = AdminService(get_db())
     data = svc.get_governance_data()
     return jsonify({"governance": data}), 200
+
+
+@compliance_bp.route("/unlock-user/<user_id>", methods=["POST"])
+@jwt_required
+@roles_required("admin")
+def unlock_user(user_id):
+    """
+    Admin: Manually unlock a locked user account.
+
+    Resets failed_login_attempts and removes locked_until.
+    Creates audit entry for ACCOUNT_UNLOCKED.
+    """
+    from app.services.audit_service import AuditService
+    from app.utils.helpers import utc_now
+    from flask import g
+
+    db = get_db()
+    user = db["users"].find_one({"_id": user_id})
+    if not user:
+        return jsonify({"error": True, "message": "User not found"}), 404
+
+    db["users"].update_one(
+        {"_id": user_id},
+        {"$set": {
+            "failed_login_attempts": 0,
+            "locked_until": None,
+            "updated_at": utc_now(),
+        }}
+    )
+
+    # Audit
+    audit = AuditService(db)
+    audit.log_event(
+        actor_id=g.current_user_id,
+        actor_role="admin",
+        action_type="update",
+        resource_type="users",
+        resource_id=user_id,
+        reason=f"Account manually unlocked by admin",
+        severity="warning",
+    )
+
+    return jsonify({"message": "Account unlocked successfully", "user_id": user_id}), 200

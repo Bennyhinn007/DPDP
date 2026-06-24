@@ -181,8 +181,8 @@ class TestLogin:
 
     def test_account_lockout_after_5_failures(self, client, app):
         self._register_user(client)
-        # 5 failed attempts
-        for _ in range(5):
+        # 3 failed attempts (MAX_LOGIN_ATTEMPTS=3 in config)
+        for _ in range(3):
             client.post("/api/v1/auth/login", json={
                 "email": "test@example.com",
                 "password": "WrongPassword",
