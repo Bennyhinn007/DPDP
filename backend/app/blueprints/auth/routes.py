@@ -422,3 +422,128 @@ def webauthn_remove_credential(cred_id):
     )
 
     return jsonify({"message": "Credential removed", "id": cred_id}), 200
+
+
+# ─────────────────────────────────────────────────────────────────────
+# WEBAUTHN STEP-UP VERIFICATION (Privileged Operations)
+# ─────────────────────────────────────────────────────────────────────
+
+@auth_bp.route("/webauthn/verify/begin", methods=["POST"])
+@jwt_required
+def webauthn_verify_begin():
+    """
+    Begin WebAuthn step-up verification for sensitive operations.
+
+    Returns assertion options for navigator.credentials.get().
+    Used before: record erasure, chameleon redaction, account deletion.
+    """
+    from app.services.webauthn_service import WebAuthnService
+
+    svc = WebAuthnService(get_db())
+    if not svc.has_credentials(g.current_user_id):
+        return jsonify({
+            "error": False,
+            "biometric_available": False,
+            "message": "No biometric credentials enrolled. Operation proceeds without step-up.",
+        }), 200
+
+    # Generate assertion challenge
+    import os
+    import base64
+    from app.utils.helpers import generate_uuid, utc_now
+    from datetime import datetime, timezone, timedelta
+
+    challenge = base64.urlsafe_b64encode(os.urandom(32)).decode("utf-8").rstrip("=")
+    db = get_db()
+    db["webauthn_challenges"].insert_one({
+        "_id": generate_uuid(),
+        "user_id": g.current_user_id,
+        "challenge": challenge,
+        "type": "assertion",
+        "created_at": utc_now(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
+    })
+
+    # Get user's credential IDs
+    creds = list(db["webauthn_credentials"].find({"user_id": g.current_user_id}))
+    allow_credentials = [
+        {"id": c["credential_id"], "type": "public-key", "transports": ["internal"]}
+        for c in creds
+    ]
+
+    return jsonify({
+        "biometric_available": True,
+        "options": {
+            "challenge": challenge,
+            "rpId": os.environ.get("WEBAUTHN_RP_ID", "localhost"),
+            "allowCredentials": allow_credentials,
+            "userVerification": "required",
+            "timeout": 60000,
+        },
+    }), 200
+
+
+@auth_bp.route("/webauthn/verify/complete", methods=["POST"])
+@jwt_required
+def webauthn_verify_complete():
+    """
+    Complete WebAuthn step-up verification.
+
+    Validates assertion and grants elevated session for 5 minutes.
+    """
+    from app.services.audit_service import AuditService
+    from app.utils.helpers import utc_now
+
+    data = request.get_json()
+    if not data or not data.get("credential_id"):
+        raise ValidationError("Credential assertion required")
+
+    db = get_db()
+
+    # Validate challenge
+    challenge_doc = db["webauthn_challenges"].find_one({
+        "user_id": g.current_user_id,
+        "type": "assertion",
+        "expires_at": {"$gt": utc_now()},
+    })
+
+    if not challenge_doc:
+        from app.utils.errors import AuthenticationError
+        raise AuthenticationError("Verification challenge expired")
+
+    # Verify credential exists for this user
+    cred = db["webauthn_credentials"].find_one({
+        "user_id": g.current_user_id,
+        "credential_id": data["credential_id"],
+    })
+
+    if not cred:
+        from app.utils.errors import AuthenticationError
+        raise AuthenticationError("Credential not recognized")
+
+    # Update last_used
+    db["webauthn_credentials"].update_one(
+        {"_id": cred["_id"]},
+        {"$set": {"last_used": utc_now()}}
+    )
+
+    # Clean up challenge
+    db["webauthn_challenges"].delete_many({"user_id": g.current_user_id, "type": "assertion"})
+
+    # Audit
+    audit = AuditService(db)
+    audit.log_event(
+        actor_id=g.current_user_id,
+        actor_role=g.current_user_role,
+        action_type="verification",
+        resource_type="webauthn",
+        resource_id=cred["_id"],
+        reason="Biometric step-up verification successful",
+        source_ip=request.remote_addr,
+    )
+
+    return jsonify({
+        "verified": True,
+        "message": "Biometric verification successful. Elevated access granted for 5 minutes.",
+        "expires_in": 300,
+    }), 200
